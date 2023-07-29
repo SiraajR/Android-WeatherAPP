@@ -116,6 +116,7 @@ public class DataPage extends AppCompatActivity {
                             // Update the timeTextView with the initial time
                             String formattedTime = timeCalc.getCurrentTime();
                             ((TextView) findViewById(R.id.timeTextView)).setText(formattedTime);
+                            fetchWikipediaContent(cityName);
 
                             // Schedule the time update using a Handler
                             handler.postDelayed(new Runnable() {
@@ -164,6 +165,49 @@ public class DataPage extends AppCompatActivity {
 
 
     }
+    private void fetchWikipediaContent(String cityName) {
+        String apiUrl = "https://en.wikipedia.org/w/api.php?action=query&format=json&prop=extracts&exintro=true&redirects=true&titles=" + cityName;
+
+        StringRequest request = new StringRequest(Request.Method.GET, apiUrl,
+                new Response.Listener<String>() {
+                    @Override
+                    public void onResponse(String response) {
+                        try {
+                            JSONObject jsonResponse = new JSONObject(response);
+                            JSONObject pagesObject = jsonResponse.getJSONObject("query").getJSONObject("pages");
+
+                            // Find the page ID (it varies for different cities)
+                            String pageId = pagesObject.keys().next();
+
+                            // Get the extract (the paragraph of information) from the JSON response
+                            String extract = pagesObject.getJSONObject(pageId).getString("extract");
+
+                            extract = android.text.Html.fromHtml(extract).toString();
+                            if (extract.length() > 330) {
+                                extract = extract.substring(0, 330) + "...";
+                            }
+
+                            // Update your TextView or any other UI element to display the extracted information
+                            ((TextView) findViewById(R.id.wikiInfotextView)).setText(extract);
+
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                            // Handle JSON parsing error
+                        }
+                    }
+                },
+                new Response.ErrorListener() {
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+                        error.printStackTrace();
+                        // Handle error while fetching data from Wikipedia
+                    }
+                });
+
+        RequestQueue requestQueue = Volley.newRequestQueue(this);
+        requestQueue.add(request);
+    }
+
 
 
 }
@@ -210,4 +254,5 @@ class  TimeCalc {
         }
     }
 }
+
 
