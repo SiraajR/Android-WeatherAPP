@@ -78,7 +78,7 @@ public class DataPage extends AppCompatActivity {
         });
     }
     private void fetchWeatherData(String cityName) {
-        String apiKey ="c7cd4713068a4e949ea182633232407";
+        String apiKey ="theAPIkey";
         String baseUrl = "http://api.weatherapi.com/v1";
         String url = baseUrl + "/current.json?key=" + apiKey + "&q=" + cityName;
 
