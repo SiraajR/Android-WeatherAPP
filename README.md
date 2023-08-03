@@ -6,6 +6,7 @@ city.
 
 
 *******New Addition********
+
  1)Now not only can the user open a wiki page reagarding the city, the app it self gives some Information about the city the user has searched for.
  
  2) Added favorite button on the dataPage so that the user can select there favourite location. This favourite location is displayed on the mainActivity.
