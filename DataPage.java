@@ -1,5 +1,7 @@
 package com.example.weather;
 
+import android.content.SharedPreferences;
+import android.preference.PreferenceManager;
 import androidx.appcompat.app.AppCompatActivity;
 
 
@@ -7,11 +9,13 @@ import android.content.Intent;
 import android.graphics.Color;
 import android.icu.text.SimpleDateFormat;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -39,6 +43,8 @@ public class DataPage extends AppCompatActivity {
     int updateTimeMillis = 1000 * 60; // 1 minute interval (in milliseconds)
     TimeCalc timeCalc;
 
+    boolean fav = false;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -46,22 +52,51 @@ public class DataPage extends AppCompatActivity {
         setContentView(R.layout.activity_data_page);
         Intent i = getIntent();
         String cityName = i.getStringExtra("City Name")+"'s Weather";
-        city = i.getStringExtra("City Name");
+        city = Title(i.getStringExtra("City Name"));
         ((TextView) findViewById(R.id.textView)).setText(cityName);
 
         ((TextView) findViewById(R.id.textView2)).setText("Want to learn more about "+i.getStringExtra("City Name")+"?");
         fetchWeatherData(city);
-        final TextView timeTextView = findViewById(R.id.timeTextView);
 
-        // Create a TimeCalc instance with the initial time from the API response
+    }
+    public void onFavoriteButtonClicked(View view) {
+        fav = !fav;
+        ImageButton favoriteButton = findViewById(R.id.imageButton3);
 
+        SharedPreferences favCityName = getSharedPreferences("FavoriteCities", MODE_PRIVATE);
+        SharedPreferences.Editor editor = favCityName.edit();
 
+        if (favCityName.contains("FavouriteCity1") && favCityName.getString("FavouriteCity1", "").equals(city)) {
+            editor.remove("FavouriteCity1");
+        } else if (favCityName.contains("FavouriteCity2") && favCityName.getString("FavouriteCity2", "").equals(city)) {
+            editor.remove("FavouriteCity2");
+        } else if (favCityName.contains("FavouriteCity3") && favCityName.getString("FavouriteCity3", "").equals(city)) {
+            editor.remove("FavouriteCity3");
+        } else {
+
+            if (!favCityName.contains("FavouriteCity1")) {
+                editor.putString("FavouriteCity1", city);
+            } else if (!favCityName.contains("FavouriteCity2")) {
+                editor.putString("FavouriteCity2", city);
+            } else if (!favCityName.contains("FavouriteCity3")) {
+                editor.putString("FavouriteCity3", city);
+            }
+        }
+        editor.apply();
 
 
     }
+
     public void launchMain(View v){
         ((Button)findViewById(R.id.button2)).setBackgroundColor(Color.WHITE);
         Intent page = new Intent(this , MainActivity.class);
+        page.putExtra("bool Value", fav);
+        if(fav){
+            page.putExtra("favoriteCity", city);
+
+
+            Log.d("done","City imported");
+        }
         startActivity(page);
     }
 
@@ -78,7 +113,7 @@ public class DataPage extends AppCompatActivity {
         });
     }
     private void fetchWeatherData(String cityName) {
-        String apiKey ="theAPIkey";
+        String apiKey ="apikey";
         String baseUrl = "http://api.weatherapi.com/v1";
         String url = baseUrl + "/current.json?key=" + apiKey + "&q=" + cityName;
 
@@ -93,10 +128,7 @@ public class DataPage extends AppCompatActivity {
                             JSONObject jsonResponse = new JSONObject(response);
                             JSONObject currentWeatherObject = jsonResponse.getJSONObject("current");
                             JSONObject timezone = jsonResponse.getJSONObject("location");
-
-
                             // Extract the weather information
-
                             double temperature = currentWeatherObject.getDouble("temp_c");
                             ((TextView) findViewById(R.id.temperatureTextView)).setText(getString(R.string.temperature_format, temperature));
 
@@ -105,20 +137,18 @@ public class DataPage extends AppCompatActivity {
                             Picasso.get().load(iconUrl).into(iconImageView);
 
                             iconImageView.requestLayout();
-                            timeZone = timezone.getString("localtime");
+
                             timeZone = timezone.getString("localtime");
                             // Extract only the time portion from the "localtime" string
                             String timeOnly = timeZone.substring(timeZone.indexOf(" ") + 1);
 
                             // Create a TimeCalc instance with the extracted time
                             timeCalc = new TimeCalc(timeOnly);
-
-                            // Update the timeTextView with the initial time
                             String formattedTime = timeCalc.getCurrentTime();
                             ((TextView) findViewById(R.id.timeTextView)).setText(formattedTime);
                             fetchWikipediaContent(cityName);
 
-                            // Schedule the time update using a Handler
+
                             handler.postDelayed(new Runnable() {
                                 @Override
                                 public void run() {
@@ -126,16 +156,10 @@ public class DataPage extends AppCompatActivity {
                                     timeCalc.incrementTime();
                                     String formattedTime = timeCalc.getCurrentTime();
                                     ((TextView) findViewById(R.id.timeTextView)).setText(formattedTime);
-
                                     // Schedule the next update after updateTimeMillis milliseconds
                                     handler.postDelayed(this, updateTimeMillis);
                                 }
                             }, updateTimeMillis);
-
-
-
-
-
                         } catch (JSONException e) {
                             e.printStackTrace();
 
@@ -175,19 +199,12 @@ public class DataPage extends AppCompatActivity {
                         try {
                             JSONObject jsonResponse = new JSONObject(response);
                             JSONObject pagesObject = jsonResponse.getJSONObject("query").getJSONObject("pages");
-
-                            // Find the page ID (it varies for different cities)
                             String pageId = pagesObject.keys().next();
-
-                            // Get the extract (the paragraph of information) from the JSON response
                             String extract = pagesObject.getJSONObject(pageId).getString("extract");
-
                             extract = android.text.Html.fromHtml(extract).toString();
                             if (extract.length() > 330) {
-                                extract = extract.substring(0, 330) + "...";
+                                extract = extract.substring(0, 530) + "...";
                             }
-
-                            // Update your TextView or any other UI element to display the extracted information
                             ((TextView) findViewById(R.id.wikiInfotextView)).setText(extract);
 
                         } catch (JSONException e) {
@@ -200,59 +217,31 @@ public class DataPage extends AppCompatActivity {
                     @Override
                     public void onErrorResponse(VolleyError error) {
                         error.printStackTrace();
-                        // Handle error while fetching data from Wikipedia
                     }
                 });
 
         RequestQueue requestQueue = Volley.newRequestQueue(this);
         requestQueue.add(request);
     }
+    private String Title(String city) {
+        if (city.isEmpty()) {
+            return city;
+        }
+        StringBuilder formattedTitle = new StringBuilder();
+        String[] words = city.split(" ");
+        for (String word : words) {
+            if (!word.isEmpty()) {
+                formattedTitle.append(Character.toUpperCase(word.charAt(0)));
+                formattedTitle.append(word.substring(1).toLowerCase());
+                formattedTitle.append(" ");
+            }
+        }
+        return formattedTitle.toString().trim();
+    }
 
 
 
 }
-class  TimeCalc {
-    private int hour;
-    private int minute;
 
-    public TimeCalc(String timeString) {
-        // Parse the input timeString into hours and minutes
-
-        if (timeString.length() == 5) {
-            hour = Integer.parseInt(timeString.substring(0,2));
-            minute = Integer.parseInt(timeString.substring(3,5));
-        }else if(timeString.length() ==4){
-            hour = Integer.parseInt(timeString.substring(0,1));
-            minute = Integer.parseInt(timeString.substring(2,4));
-        }
-        else {
-            throw new IllegalArgumentException("Invalid time format: " + timeString);
-        }
-    }
-
-    public String getCurrentTime() {
-        if(hour < 12){
-            return String.format(Locale.getDefault(), "%02d:%02d am", hour, minute);
-        }
-        return String.format(Locale.getDefault(), "%02d:%02d pm", hour, minute);
-    }
-
-    public void incrementTime() {
-        // Increment the minute part and handle overflow
-        minute++;
-        if (minute >= 60) {
-            minute = 0;
-            incrementHour();
-        }
-    }
-
-    private void incrementHour() {
-        // Increment the hour part and handle overflow
-        hour++;
-        if (hour >= 24) {
-            hour = 0; // Reset to 0 when it becomes 24 (midnight)
-        }
-    }
-}
 
 
